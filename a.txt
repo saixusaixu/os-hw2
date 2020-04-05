@@ -1,4 +1,0 @@
-a.txt
-README.md
-shell
-shell.c
