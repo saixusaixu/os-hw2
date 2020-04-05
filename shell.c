@@ -87,7 +87,7 @@ runcmd(struct cmd *cmd)
     //fprintf(stderr, "pipe not implemented\n");
     // Your code here ...
     if(pipe(p)<0){
-	fprintf(stderr, "pipe error\n");
+	    fprintf(stderr, "pipe error\n");
     }
     int proID = fork1();
     if(proID == 1){
@@ -100,7 +100,7 @@ runcmd(struct cmd *cmd)
     	dup2(p[0],STDIN_FILENO);
     	runcmd(pcmd->right);
     	close(p[0]);
-    	wait(&proID);
+      wait(&proID);
     }
     break;
   }
