@@ -6,6 +6,7 @@
 #include <assert.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 
 // Simplifed xv6 shell.
 
@@ -23,7 +24,7 @@ struct execcmd {
 };
 
 struct redircmd {
-  int type;          // < or > 
+  int type;          // < or >
   struct cmd *cmd;   // the command to be run (e.g., an execcmd)
   char *file;        // the input/output file
   int mode;          // the mode to open the file with
@@ -50,7 +51,7 @@ runcmd(struct cmd *cmd)
 
   if(cmd == 0)
     exit(0);
-  
+
   switch(cmd->type){
   default:
     fprintf(stderr, "unknown runcmd\n");
@@ -62,7 +63,7 @@ runcmd(struct cmd *cmd)
       exit(0);
     //fprintf(stderr, "exec not implemented\n");
     // Your code here ...
-    execvp(ecmd->argv[0], ecmd->argv);  
+    execvp(ecmd->argv[0], ecmd->argv);
     break;
 
   case '>':
@@ -70,8 +71,7 @@ runcmd(struct cmd *cmd)
     rcmd = (struct redircmd*)cmd;
     //fprintf(stderr, "redir not implemented\n");
 
-    int fileD = -1;
-    fileD = open(rcmd->file, O_CREAT, rcmd->mode);
+    int fileD = open(rcmd->file, rcmd->mode, 0777);
     if(fileD < 0){
       fprintf(stderr, "fail to open file: %s\n", rcmd->file);
       exit(-1);
@@ -86,39 +86,30 @@ runcmd(struct cmd *cmd)
     pcmd = (struct pipecmd*)cmd;
     //fprintf(stderr, "pipe not implemented\n");
     // Your code here ...
-
-    if (pipe(p)<0){
-      fprintf(stderr, "pipe failed\n");
-      exit(-1);
+    if(pipe(p)<0){
+	fprintf(stderr, "pipe error\n");
     }
-    int proID;
-    proID = fork();
-    if (proID < 0){
-      fprintf(stderr, "fork process fail");
-      exit(-1);
-    }
-    else if (proID == 1){
+    int proID = fork1();
+    if(proID == 1){
       close(p[0]);
       dup2(p[1],STDOUT_FILENO);
       runcmd(pcmd->left);
       close(p[1]);
-     
+    }else{
+    	close(p[1]);
+    	dup2(p[0],STDIN_FILENO);
+    	runcmd(pcmd->right);
+    	close(p[0]);
+    	wait(&proID);
     }
-    close(p[1]);
-    dup2(p[0],STDIN_FILENO);
-    runcmd(pcmd->right);    
-    close(p[0]);
-    wait(&proID);
-
     break;
-  }    
+  }
   exit(0);
 }
 
 int
 getcmd(char *buf, int nbuf)
 {
-  
   if (isatty(fileno(stdin)))
     fprintf(stdout, "cs6233> ");
   memset(buf, 0, nbuf);
