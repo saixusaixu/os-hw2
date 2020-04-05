@@ -70,32 +70,34 @@ runcmd(struct cmd *cmd)
     rcmd = (struct redircmd*)cmd;
     //fprintf(stderr, "redir not implemented\n");
 
-    int fd  = -1;
-    fd = open(rcmd->file, rcmd->mode , 0777);
-    if (fd < 0){
-      fprintf(stderr, "failed to open %s\n", rcmd -> file);
-      exit(0);
+    int fileD = -1;
+    fileD = open(rcmd->file, O_CREAT, rcmd->mode);
+    if(fileD < 0){
+      fprintf(stderr, "fail to open file: %s\n", rcmd->file);
+      exit(-1);
     }
-    dup2(fd, rcmd -> fd);
-    close(fd);
+    dup2(fileD, rcmd->fd);
+    close(fileD);
     runcmd(rcmd->cmd);
+
     break;
 
   case '|':
     pcmd = (struct pipecmd*)cmd;
     //fprintf(stderr, "pipe not implemented\n");
     // Your code here ...
+
     if (pipe(p)<0){
-      fprintf(stderr, "pipe error, it has failed\n");
-      exit(0);
+      fprintf(stderr, "pipe failed\n");
+      exit(-1);
     }
-    int pID;
-    pID = fork();
-    if (pID < 0){
-      fprintf(stderr, "%s\n","fork error!");
-      exit(1);
+    int proID;
+    proID = fork();
+    if (proID < 0){
+      fprintf(stderr, "fork process fail");
+      exit(-1);
     }
-    else if (pID == 1){
+    else if (proID == 1){
       close(p[0]);
       dup2(p[1],STDOUT_FILENO);
       runcmd(pcmd->left);
@@ -106,7 +108,8 @@ runcmd(struct cmd *cmd)
     dup2(p[0],STDIN_FILENO);
     runcmd(pcmd->right);    
     close(p[0]);
-    wait(&pID);
+    wait(&proID);
+
     break;
   }    
   exit(0);
